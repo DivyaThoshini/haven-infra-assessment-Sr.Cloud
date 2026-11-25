@@ -1,12 +1,3 @@
-"""
-B2, part 1 — implement can_access_screening_report().
-
-Read README.md's domain model first. A ScreeningReport belongs to a Tenant, a Tenant belongs to
-a Property, and a Property belongs to a LandlordAccount. A PropertyManager is scoped to exactly
-one LandlordAccount.
-
-Work out from that hierarchy which boundary actually gates access to a ScreeningReport.
-"""
 from app.models import PropertyManager, ScreeningReport, Property, Tenant
 
 
@@ -18,12 +9,29 @@ def can_access_screening_report(
     tenants: list[Tenant],
 ) -> bool:
     """
-    actor: the PropertyManager requesting access
-    report: the ScreeningReport they're trying to view
-    properties: all known Property records
-    tenants: all known Tenant records
+    Allow access only when the report's tenant belongs to a property
+    under the PropertyManager's landlord account.
 
-    Return True if actor may view report, False otherwise. Fail closed — if anything needed to
-    make this determination is missing (tenant not found, property not found), return False.
+    Fail closed if the tenant or property cannot be found.
     """
-    raise NotImplementedError("Implement this.")
+
+    # Find the tenant associated with the screening report
+    tenant = next(
+        (t for t in tenants if t.id == report.tenant_id),
+        None,
+    )
+
+    if tenant is None:
+        return False
+
+    # Find the property associated with the tenant
+    property = next(
+        (p for p in properties if p.id == tenant.property_id),
+        None,
+    )
+
+    if property is None:
+        return False
+
+    # Compare landlord account ownership
+    return property.landlord_account_id == actor.landlord_account_id
