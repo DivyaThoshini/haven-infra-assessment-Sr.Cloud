@@ -1,38 +1,67 @@
-"""
-B2, part 2 — implement the cost-tagging check.
 
-Read fixtures/plan.json for the shape of a `terraform show -json` plan: a `resource_changes`
-list, where each entry has a `type`, an `address`, and `change.after`.
-
-Implement check_plan() so it:
-  - Looks at every resource whose `change.actions` includes "create" or "update". A replace
-    shows up as ["delete", "create"], so it counts. Skip everything else: "no-op", "read" and
-    a pure "delete".
-  - Only checks resources that can carry tags. An entry is taggable when `change.after` has a
-    `tags` key (its value may be null or {}). An entry with no `tags` key, such as a lifecycle
-    configuration, is not taggable and must not be flagged.
-  - Reads a resource's effective tags from `tags_all` when that key is present, and from `tags`
-    otherwise (provider default_tags only show up in `tags_all`).
-  - Fails (returns a non-zero exit code) if the effective tags are missing `landlord_account_id`
-    or it is blank. That tag identifies the real billing unit, per README.md's domain model —
-    not whatever tag the resource happens to already carry.
-  - Is idempotent: running this twice against the same plan file produces the same result,
-    with no duplicate output and no flipped pass/fail.
-  - Prints which specific resource address(es) are missing the tag.
-
-Run manually: python scripts/cost_tag_check.py fixtures/plan.json
-"""
 import json
 import sys
 
 
 def check_plan(plan_path: str) -> int:
     """
-    Returns an exit code: 0 if every taggable resource being created/changed has a non-blank
-    `landlord_account_id`, non-zero otherwise.
+    Validate landlord_account_id tags on taggable resources
+    being created or updated in a Terraform JSON plan.
+
+    Returns:
+        0 if all applicable resources have the required tag.
+        1 if any applicable resource is missing the tag.
     """
-    raise NotImplementedError("Implement this.")
+
+    try:
+        with open(plan_path, "r", encoding="utf-8") as file:
+            plan = json.load(file)
+    except (OSError, json.JSONDecodeError) as error:
+        print(f"ERROR: Unable to read Terraform plan: {error}", file=sys.stderr)
+        return 1
+
+    missing_tags = []
+
+    for resource in plan.get("resource_changes", []):
+        change = resource.get("change", {})
+        actions = change.get("actions", [])
+
+        # Check only resources being created or updated.
+        if not any(action in ("create", "update") for action in actions):
+            continue
+
+        after = change.get("after")
+
+        if not isinstance(after, dict):
+            continue
+
+        # Skip resources that do not support tags.
+        if "tags" not in after:
+            continue
+
+        # Prefer tags_all because it includes provider default tags.
+        effective_tags = after.get("tags_all", after.get("tags"))
+
+        if not isinstance(effective_tags, dict):
+            effective_tags = {}
+
+        landlord_account_id = effective_tags.get("landlord_account_id")
+
+        if not isinstance(landlord_account_id, str) or not landlord_account_id.strip():
+            missing_tags.append(resource.get("address", "<unknown-resource>"))
+
+    if missing_tags:
+        for address in missing_tags:
+            print(f"MISSING landlord_account_id: {address}")
+        return 1
+
+    print("PASS: All applicable resources have landlord_account_id tags.")
+    return 0
 
 
 if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        print("Usage: python scripts/cost_tag_check.py <plan.json>", file=sys.stderr)
+        sys.exit(2)
+
     sys.exit(check_plan(sys.argv[1]))
