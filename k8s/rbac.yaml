@@ -1,0 +1,24 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: photo-api-config-reader
+  namespace: haven
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    resourceNames: ["haven-config"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: photo-api-config-reader
+  namespace: haven
+subjects:
+  - kind: ServiceAccount
+    name: photo-api
+    namespace: haven
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: photo-api-config-reader
