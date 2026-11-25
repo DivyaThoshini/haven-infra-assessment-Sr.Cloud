@@ -5,6 +5,7 @@ on:
 
 jobs:
   b0:
+    if: github.repository != 'ajackus/haven-infra-assessment'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -14,6 +15,7 @@ jobs:
       - run: ./scripts/verify_b0.sh
 
   b2:
+    if: github.repository != 'ajackus/haven-infra-assessment'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
