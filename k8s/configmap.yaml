@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: haven-config
+  namespace: haven
+data:
+  region: us-east-1
+  max_upload_mb: "25"

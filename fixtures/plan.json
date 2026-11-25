@@ -50,24 +50,73 @@
       }
     },
     {
-      "address": "aws_s3_bucket.archive_media",
-      "type": "aws_s3_bucket",
-      "name": "archive_media",
+      "address": "aws_s3_bucket_lifecycle_configuration.listing_media_archive",
+      "type": "aws_s3_bucket_lifecycle_configuration",
+      "name": "listing_media_archive",
       "change": {
-        "actions": ["no-op"],
+        "actions": ["create"],
         "after": {
-          "bucket": "haven-archive-media",
-          "tags": {}
+          "bucket": "haven-listing-media",
+          "rule": [{ "id": "archive-sold-listing-photos", "status": "Enabled" }]
         }
       }
     },
     {
-      "address": "aws_s3_bucket.decommissioned_media",
+      "address": "aws_lambda_function.report_worker",
+      "type": "aws_lambda_function",
+      "name": "report_worker",
+      "change": {
+        "actions": ["delete", "create"],
+        "after": {
+          "function_name": "report-worker",
+          "tags": { "landlord_account_id": "la-002" }
+        }
+      }
+    },
+    {
+      "address": "aws_s3_bucket.audit_logs",
       "type": "aws_s3_bucket",
-      "name": "decommissioned_media",
+      "name": "audit_logs",
+      "change": {
+        "actions": ["create"],
+        "after": {
+          "bucket": "haven-audit-logs",
+          "tags": {},
+          "tags_all": { "landlord_account_id": "la-001", "managed_by": "terraform" }
+        }
+      }
+    },
+    {
+      "address": "aws_lambda_function.legacy_exporter",
+      "type": "aws_lambda_function",
+      "name": "legacy_exporter",
       "change": {
         "actions": ["delete"],
         "after": null
+      }
+    },
+    {
+      "address": "aws_s3_bucket.scratch",
+      "type": "aws_s3_bucket",
+      "name": "scratch",
+      "change": {
+        "actions": ["create"],
+        "after": {
+          "bucket": "haven-scratch",
+          "tags": null
+        }
+      }
+    },
+    {
+      "address": "aws_lambda_function.notifier",
+      "type": "aws_lambda_function",
+      "name": "notifier",
+      "change": {
+        "actions": ["no-op"],
+        "after": {
+          "function_name": "notifier",
+          "tags": {}
+        }
       }
     }
   ]
